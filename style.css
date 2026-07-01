@@ -1,0 +1,100 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f7f6;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.container {
+    background-color: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 450px;
+}
+
+h1, h3 {
+    text-align: center;
+    color: #333;
+}
+
+.balance-board {
+    background: linear-gradient(135deg, #11998e, #38ef7d);
+    color: white;
+    padding: 15px;
+    text-align: center;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+input, select, button {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+
+button {
+    background-color: #11998e;
+    color: white;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+button:hover {
+    background-color: #0e8076;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+li {
+    background-color: #f9f9f9;
+    padding: 12px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-left: 5px solid #ccc;
+}
+
+li.pemasukan { border-left-color: #2ecc71; }
+li.pengeluaran { border-left-color: #e74c3c; }
+
+.hapus-btn {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    width: auto;
+}
+
+/* Style tambahan untuk ringkasan pemasukan & pengeluaran */
+.summary-container {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 15px;
+    gap: 10px;
+}
+
+.summary-box {
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #333;
+    padding: 10px;
+    border-radius: 6px;
+    flex: 1;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}

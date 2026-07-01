@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pencatat Keuangan Mandiri</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>💰 Pencatat Keuangan</h1>
+        
+        <div class="balance-board">
+            <h2>Total Saldo: <span id="total-saldo">Rp 0</span></h2>
+            <div class="summary-container">
+                <div class="summary-box">
+                    <small>Total Pemasukan</small>
+                    <p id="total-pemasukan" style="color: #2ecc71; font-weight: bold; margin: 5px 0 0 0;">Rp 0</p>
+                </div>
+                <div class="summary-box">
+                    <small>Total Pengeluaran</small>
+                    <p id="total-pengeluaran" style="color: #e74c3c; font-weight: bold; margin: 5px 0 0 0;">Rp 0</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-transaksi">
+            <h3>Tambah Transaksi Baru</h3>
+            <input type="text" id="deskripsi" placeholder="Contoh: Beli di Toko Seberang">
+            <input type="number" id="nominal" placeholder="Nominal (Rp)">
+            <input type="date" id="tanggal"> 
+            
+            <select id="jenis" onchange="updateKategoriOptions()">
+                <option value="pemasukan">Pemasukan (+)</option>
+                <option value="pengeluaran">Pengeluaran (-)</option>
+            </select>
+
+            <select id="kategori">
+                </select>
+
+            <button onclick="tambahTransaksi()">Simpan</button>
+        </div>
+
+        <div class="riwayat">
+            <h3>Riwayat Transaksi</h3>
+            
+            <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                <div>
+                    <label for="filter-bulan" style="font-size: 14px; color: #666; font-weight: bold;">Pilih Periode: </label>
+                    <select id="filter-bulan" onchange="updateUI()" style="padding: 8px; width: auto; display: inline-block; margin: 0;">
+                        </select>
+                </div>
+                
+                <button onclick="downloadExcel()" style="background: #11998e; font-size: 13px; padding: 8px 12px; width: auto; margin: 0;">
+                    📊 Unduh Excel
+                </button>
+            </div>
+
+            <ul id="daftar-transaksi">
+                </ul>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
