@@ -11,6 +11,13 @@
 </head>
 <body>
     <div class="container">
+        <div id="auth-container" style="margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 12px 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <div id="user-info">
+                <span id="status-user" style="font-size: 14px; font-weight: bold; color: #666;">Memuat status...</span>
+            </div>
+            <button id="auth-btn" style="width: auto; padding: 8px 16px; font-size: 13px; margin: 0; background: #3498db;">Masuk</button>
+        </div>
+
         <h1>💰 Pencatat Keuangan</h1>
         
         <div class="balance-board">
@@ -73,8 +80,12 @@
             <ul id="daftar-transaksi">
                 </ul>
         </div>
+        
+        <p style="text-align: center; font-size: 11px; color: #aaa; margin-top: 30px;">
+            © Pencatat Keuangan Premium. Lisensi Penggunaan Pribadi. Dilarang Memperjualbelikan Ulang Kode Ini.
+        </p>
     </div>
 
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
