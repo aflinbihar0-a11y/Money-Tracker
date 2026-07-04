@@ -2,14 +2,15 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// ⚠️ GANTI DENGAN KODE KONFIGURASI KAMU SENDIRI DARI FIREBASE CONSOLE
+// ✅ CONFIGURASI FIREBASE ASLI MILIK AFLIN
 const firebaseConfig = {
-    apiKey: "AIzaSyD-CONTOH-KUNCI-API-ANDA",
-    authDomain: "pencatat-keuangan-contoh.firebaseapp.com",
-    projectId: "pencatat-keuangan-contoh",
-    storageBucket: "pencatat-keuangan-contoh.appspot.com",
-    messagingSenderId: "1234567890",
-    appId: "1:1234567890:web:abcdefg123456"
+    apiKey: "AIzaSyC0UiNRwTFjw7vLgmuKnuo8x4JnISGneLE",
+    authDomain: "money-tracker-6af12.firebaseapp.com",
+    projectId: "money-tracker-6af12",
+    storageBucket: "money-tracker-6af12.firebasestorage.app",
+    messagingSenderId: "415269324665",
+    appId: "1:415269324665:web:737dca248e33d4eef911a8",
+    measurementId: "G-RW6C5H828V"
 };
 
 // Inisialisasi Firebase & Auth
