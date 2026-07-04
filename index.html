@@ -7,8 +7,7 @@
     <link rel="stylesheet" href="style.css">
     
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
@@ -47,14 +46,15 @@
             <button onclick="tambahTransaksi()">Simpan</button>
         </div>
 
-        <div class="form-transaksi" style="margin-bottom: 20px;">
-    <h3>📊 Grafik Keuangan Periode Ini</h3>
-    <div style="display: flex; flex-direction: column; gap: 20px; align-items: center;">
-        <div style="position: relative; width: 100%; max-width: 300px;">
-            <canvas id="grafikKategori"></canvas>
+        <div id="box-grafik-container" class="form-transaksi" style="margin-bottom: 20px; display: none;">
+            <h3 style="text-align: center;">📊 Presentasi Pengeluaran Periode Ini</h3>
+            <div style="display: flex; flex-direction: column; gap: 20px; align-items: center;">
+                <div style="position: relative; width: 100%; max-width: 300px;">
+                    <canvas id="grafikKategori"></canvas>
+                </div>
+            </div>
         </div>
-    </div>
-</div>
+
         <div class="riwayat">
             <h3>Riwayat Transaksi</h3>
             
