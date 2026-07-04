@@ -1,7 +1,8 @@
 // Mengambil data dari LocalStorage saat pertama kali web dibuka
 let transaksi = JSON.parse(localStorage.getItem('transaksi')) || [];
+let chartKategori = null; // Variabel global untuk menampung status grafik Chart.js
 
-// 1. DAFTAR KATEGORI - DIUBAH SESUAI REQ TERBARU KAMU
+// 1. DAFTAR KATEGORI
 const daftarKategori = {
     pemasukan: ["Gaji Bulanan", "Side Hustle", "Bonus Lainnya", "Tambah Lainnya..."],
     pengeluaran: [
@@ -96,7 +97,79 @@ function generateFilterOptions() {
     }
 }
 
-// Menggambar Ulang Tampilan Tabel dan Saldo
+// FUNGSI BARU: Mengolah data dan menggambar grafik presentasi presentase pengeluaran
+function updateGrafik() {
+    const filterBulanSelect = document.getElementById('filter-bulan');
+    const periodeTerpilih = filterBulanSelect ? filterBulanSelect.value : 'all';
+
+    // 1. Filter transaksi hanya jenis PENGELUARAN pada periode yang dipilih
+    const dataTerfilter = transaksi.filter(item => {
+        const periodeTransaksi = item.tanggal ? item.tanggal.substring(0, 7) : '';
+        return item.jenis === 'pengeluaran' && (periodeTerpilih === 'all' || periodeTransaksi === periodeTerpilih);
+    });
+
+    // 2. Hitung akumulasi nominal berdasarkan kategori masing-masing
+    const totalPerKategori = {};
+    dataTerfilter.forEach(item => {
+        const kat = item.kategori || "Tak Terduga";
+        totalPerKategori[kat] = (totalPerKategori[kat] || 0) + item.nominal;
+    });
+
+    const labels = Object.keys(totalPerKategori);
+    const data = Object.values(totalPerKategori);
+
+    const ctx = document.getElementById('grafikKategori');
+    const boxGrafik = document.getElementById('box-grafik-container');
+    if (!ctx) return;
+
+    // 3. Reset canvas grafik lama agar tidak tumpang tindih saat di-hover
+    if (chartKategori) {
+        chartKategori.destroy();
+    }
+
+    // Sembunyikan container jika tidak ada data pengeluaran agar tampilan bersih
+    if (data.length === 0) {
+        if (boxGrafik) boxGrafik.style.display = 'none';
+        return;
+    } else {
+        if (boxGrafik) boxGrafik.style.display = 'block';
+    }
+
+    // 4. Inisialisasi visualisasi Pie Chart dengan Chart.js
+    chartKategori = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: [
+                    '#e74c3c', '#3498db', '#f1c40f', '#2ecc71', 
+                    '#9b59b6', '#1abc9c', '#e67e22', '#34495e', '#7f8c8d'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { boxWidth: 12, font: { size: 12 } }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let value = context.raw || 0;
+                            return ` ${context.label}: Rp ${value.toLocaleString('id-ID')}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Menggambar Ulang Tampilan Tabel, Saldo, dan menyegarkan Grafik
 function updateUI() {
     const daftar = document.getElementById('daftar-transaksi');
     const totalSaldoEl = document.getElementById('total-saldo');
@@ -146,6 +219,9 @@ function updateUI() {
     if (totalPengeluaranEl) totalPengeluaranEl.innerText = `Rp ${totalPengeluaran.toLocaleString('id-ID')}`;
     
     localStorage.setItem('transaksi', JSON.stringify(transaksi));
+
+    // Jalankan pembaruan data visual presentasi keuangan
+    updateGrafik();
 }
 
 // Menambah Transaksi Baru
@@ -223,13 +299,14 @@ function hapusTransaksi(index) {
     updateUI();
 }
 
-// Daftarkan ke objek window agar bisa dipanggil dari atribut onclick/onchange HTML
+// Registrasi modul fungsi ke ranah global window
 window.updateKategoriOptions = updateKategoriOptions;
 window.cekKategoriLainnya = cekKategoriLainnya;
 window.tambahTransaksi = tambahTransaksi;
 window.hapusTransaksi = hapusTransaksi;
 window.downloadExcel = downloadExcel;
 window.updateUI = updateUI;
+window.updateGrafik = updateGrafik;
 
 // Dijalankan otomatis saat halaman selesai dimuat
 document.addEventListener("DOMContentLoaded", () => {
