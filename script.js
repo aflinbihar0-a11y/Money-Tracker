@@ -1,6 +1,8 @@
 // ISI DENGAN MODUL FIREBASE SDK RESMI
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+// Tambahan modul untuk Cloud Firestore Database
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // ✅ CONFIGURASI FIREBASE ASLI MILIK AFLIN
 const firebaseConfig = {
@@ -13,9 +15,10 @@ const firebaseConfig = {
     measurementId: "G-RW6C5H828V"
 };
 
-// Inisialisasi Firebase & Auth
+// Inisialisasi Firebase, Auth, & Firestore Database
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app); // Hubungkan ke Cloud Database
 const provider = new GoogleAuthProvider();
 
 // Tampungan data transaksi aktif
@@ -40,32 +43,29 @@ const daftarKategori = {
 };
 
 // Memantau Status Login User
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
     const statusUser = document.getElementById('status-user');
     const authBtn = document.getElementById('auth-btn');
 
     if (user) {
-        // Jika pembeli sudah login berhasil
         userSekarang = user;
         statusUser.innerText = `👋 Halo, ${user.displayName}`;
         authBtn.innerText = "Keluar";
         authBtn.style.background = "#e74c3c";
 
-        // Ambil data transaksi khusus untuk akun email ini saja
-        transaksi = JSON.parse(localStorage.getItem(`transaksi_${user.uid}`)) || [];
+        // Ambil data transaksi dari Cloud Firestore khusus untuk UID user ini
+        await ambilDataDariCloud();
     } else {
-        // Jika belum login / sudah logout
         userSekarang = null;
         statusUser.innerText = "🔒 Belum Masuk (Akses Terkunci)";
         authBtn.innerText = "Masuk dengan Google";
         authBtn.style.background = "#3498db";
-        transaksi = []; // Kosongkan layar transaksi demi keamanan data
+        transaksi = []; 
+        updateUI(); // Kosongkan layar
     }
     
-    // Segarkan ulang tampilan UI
     updateKategoriOptions();
     generateFilterOptions();
-    updateUI();
 });
 
 // Logika Fungsi Tombol Login/Logout Klik
@@ -76,6 +76,36 @@ document.getElementById('auth-btn').addEventListener('click', () => {
         signInWithPopup(auth, provider).catch((error) => alert("Gagal login: " + error.message));
     }
 });
+
+// Fungsi untuk Mengambil Data dari Cloud Firestore
+async function ambilDataDariCloud() {
+    if (!userSekarang) return;
+    try {
+        transaksi = [];
+        // Ambil data dari koleksi "transaksi" berdasarkan UID pengguna, urutkan berdasarkan tanggal terbaru
+        const q = query(
+            collection(db, "transaksi"), 
+            where("userId", "==", userSekarang.uid)
+        );
+        
+        const querySnapshot = await getDocs(q);
+        querySnapshot.forEach((documentSnapshot) => {
+            const data = documentSnapshot.data();
+            // Simpan id dokumen firestore agar nanti bisa dihapus
+            transaksi.push({
+                id: documentSnapshot.id,
+                ...data
+            });
+        });
+        
+        // Urutkan manual berdasarkan tanggal di sisi client
+        transaksi.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+
+        updateUI();
+    } catch (error) {
+        console.error("Gagal mengambil data cloud: ", error);
+    }
+}
 
 function updateKategoriOptions() {
     const jenisEl = document.getElementById('jenis');
@@ -232,7 +262,7 @@ function updateUI() {
     let totalPemasukan = 0;   
     let totalPengeluaran = 0;  
 
-    transaksi.forEach((item, index) => {
+    transaksi.forEach((item) => {
         const periodeTransaksi = item.tanggal ? item.tanggal.substring(0, 7) : ''; 
 
         if (periodeTerpilih === 'all' || periodeTransaksi === periodeTerpilih) {
@@ -255,7 +285,7 @@ function updateUI() {
                     <small style="color: #888; display: block;">${formatTanggal} • <span style="font-weight: 600; color: #11998e;">[${item.kategori || 'Tanpa Kategori'}]</span></small>
                     <strong>${item.deskripsi}</strong> (Rp ${item.nominal.toLocaleString('id-ID')})
                 </div>
-                <button class="hapus-btn" onclick="hapusTransaksi(${index})">X</button>
+                <button class="hapus-btn" onclick="hapusTransaksiCloud('${item.id}')">X</button>
             `;
             daftar.appendChild(li);
         }
@@ -264,17 +294,12 @@ function updateUI() {
     if (totalSaldoEl) totalSaldoEl.innerText = `Rp ${totalSaldo.toLocaleString('id-ID')}`;
     if (totalPemasukanEl) totalPemasukanEl.innerText = `Rp ${totalPemasukan.toLocaleString('id-ID')}`;
     if (totalPengeluaranEl) totalPengeluaranEl.innerText = `Rp ${totalPengeluaran.toLocaleString('id-ID')}`;
-    
-    // Amankan data ke penyimpanan unik berdasarkan UID user yang login
-    if (userSekarang) {
-        localStorage.setItem(`transaksi_${userSekarang.uid}`, JSON.stringify(transaksi));
-    }
 
     updateGrafik();
 }
 
-function tambahTransaksi() {
-    // Kunci fitur tambah data jika belum melakukan login Google
+// Fungsi Simpan Transaksi Langsung ke Internet (Cloud)
+async function tambahTransaksi() {
     if (!userSekarang) {
         alert("Akses Terkunci! Silakan klik 'Masuk dengan Google' terlebih dahulu.");
         return;
@@ -305,14 +330,45 @@ function tambahTransaksi() {
         return;
     }
 
-    transaksi.push({ deskripsi, nominal, tanggal, jenis, kategori });
-    document.getElementById('deskripsi').value = '';
-    document.getElementById('nominal').value = '';
-    document.getElementById('tanggal').value = '';
+    const dataTransaksi Baru = {
+        userId: userSekarang.uid, // Tautkan ke ID user login
+        deskripsi,
+        nominal,
+        tanggal,
+        jenis,
+        kategori
+    };
 
-    updateKategoriOptions(); 
-    generateFilterOptions();
-    updateUI();
+    try {
+        // Kirim dan simpan ke Cloud Firestore
+        await addDoc(collection(db, "transaksi"), dataTransaksiBaru);
+        
+        // Reset form input
+        document.getElementById('deskripsi').value = '';
+        document.getElementById('nominal').value = '';
+        document.getElementById('tanggal').value = '';
+
+        // Ambil data terbaru dari cloud agar UI sinkron
+        await ambilDataDariCloud();
+        generateFilterOptions();
+    } catch (error) {
+        alert("Gagal menyimpan ke database cloud: " + error.message);
+    }
+}
+
+// Fungsi Hapus Transaksi Langsung dari Internet (Cloud)
+async function hapusTransaksiCloud(docId) {
+    if (!docId || docId === 'undefined') return;
+    if (confirm("Apakah Anda yakin ingin menghapus transaksi ini dari database cloud?")) {
+        try {
+            await deleteDoc(doc(db, "transaksi", docId));
+            // Refresh data setelah sukses dihapus
+            await ambilDataDariCloud();
+            generateFilterOptions();
+        } catch (error) {
+            alert("Gagal menghapus data dari cloud: " + error.message);
+        }
+    }
 }
 
 function downloadExcel() {
@@ -351,17 +407,11 @@ function downloadExcel() {
     XLSX.writeFile(workbook, namaFile);
 }
 
-function hapusTransaksi(index) {
-    transaksi.splice(index, 1);
-    generateFilterOptions(); 
-    updateUI();
-}
-
 // Ikat fungsi ke ranah global window agar tetap bekerja pada tipe module
 window.updateKategoriOptions = updateKategoriOptions;
 window.cekKategoriLainnya = cekKategoriLainnya;
 window.tambahTransaksi = tambahTransaksi;
-window.hapusTransaksi = hapusTransaksi;
+window.hapusTransaksiCloud = hapusTransaksiCloud;
 window.downloadExcel = downloadExcel;
 window.updateUI = updateUI;
 window.updateGrafik = updateGrafik;
