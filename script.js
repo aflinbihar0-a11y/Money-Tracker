@@ -1,49 +1,67 @@
 // Mengambil data dari LocalStorage saat pertama kali web dibuka
 let transaksi = JSON.parse(localStorage.getItem('transaksi')) || [];
 
-// 1. DAFTAR KATEGORI (Sudah ditambahkan Kategori rutin, Pulsa, Kos, dan Tambah Lainnya)
+// 1. DAFTAR KATEGORI - DIUBAH SESUAI REQ TERBARU KAMU
 const daftarKategori = {
     pemasukan: ["Gaji Bulanan", "Side Hustle", "Bonus Lainnya", "Tambah Lainnya..."],
-    pengeluaran: ["Makanan", "Minuman", "Transportasi", "Nongkrong Kafe", "Hiburan", "Tak Terduga", "Pengeluaran rutin", "Pulsa dan Kuota", "Kos/ Sewa Rumah", "Tambah Lainnya..."]
+    pengeluaran: [
+        "Makan",
+        "Minum",
+        "Transportasi",
+        "Nongkrong",
+        "Hiburan",
+        "Pengeluaran rutin",
+        "Pulsa dan Kuota",
+        "Kos/ Sewa Tempat tinggal",
+        "Tambah Lainnya..."
+    ]
 };
 
 // Fungsi untuk mengubah isi dropdown kategori berdasarkan Jenis yang dipilih
 function updateKategoriOptions() {
-    const jenis = document.getElementById('jenis').value;
+    const jenisEl = document.getElementById('jenis');
     const kategoriSelect = document.getElementById('kategori');
     const kategoriBaruInput = document.getElementById('kategori-baru-input');
-    if (!kategoriSelect) return;
-
+    
+    if (!jenisEl || !kategoriSelect) return;
+    
+    const jenis = jenisEl.value;
     kategoriSelect.innerHTML = '';
-    daftarKategori[jenis].forEach(kat => {
-        const option = document.createElement('option');
-        option.value = kat;
-        option.innerText = kat;
-        kategoriSelect.appendChild(option);
-    });
+    
+    // Isi dropdown dari array daftarKategori
+    if (daftarKategori[jenis]) {
+        daftarKategori[jenis].forEach(kat => {
+            const option = document.createElement('option');
+            option.value = kat;
+            option.innerText = kat;
+            kategoriSelect.appendChild(option);
+        });
+    }
 
-    // Reset dan sembunyikan input kustom setiap kali jenis transaksi berganti
+    // Sembunyikan input kustom setiap kali ganti jenis transaksi
     if (kategoriBaruInput) {
         kategoriBaruInput.style.display = "none";
         kategoriBaruInput.value = "";
     }
 }
 
-// FUNGSI BARU: Mendeteksi apakah user memilih opsi 'Tambah Lainnya...'
+// Mendeteksi apakah user memilih opsi 'Tambah Lainnya...'
 function cekKategoriLainnya() {
     const kategoriSelect = document.getElementById('kategori');
     const kategoriBaruInput = document.getElementById('kategori-baru-input');
     
     if (kategoriSelect && kategoriSelect.value === "Tambah Lainnya...") {
-        kategoriBaruInput.style.display = "block";
-        kategoriBaruInput.focus();
+        if (kategoriBaruInput) {
+            kategoriBaruInput.style.display = "block";
+            kategoriBaruInput.focus();
+        }
     } else if (kategoriBaruInput) {
         kategoriBaruInput.style.display = "none";
         kategoriBaruInput.value = "";
     }
 }
 
-// Membuat pilihan filter Periode (Bulan + Tahun) secara otomatis dari data input
+// Membuat pilihan filter Periode secara otomatis
 function generateFilterOptions() {
     const filterBulanSelect = document.getElementById('filter-bulan');
     if (!filterBulanSelect) return;
@@ -78,6 +96,7 @@ function generateFilterOptions() {
     }
 }
 
+// Menggambar Ulang Tampilan Tabel dan Saldo
 function updateUI() {
     const daftar = document.getElementById('daftar-transaksi');
     const totalSaldoEl = document.getElementById('total-saldo');
@@ -129,6 +148,7 @@ function updateUI() {
     localStorage.setItem('transaksi', JSON.stringify(transaksi));
 }
 
+// Menambah Transaksi Baru
 function tambahTransaksi() {
     const deskripsi = document.getElementById('deskripsi').value;
     const nominal = parseInt(document.getElementById('nominal').value);
@@ -137,7 +157,6 @@ function tambahTransaksi() {
     let kategori = document.getElementById('kategori').value;
     const kategoriBaruInput = document.getElementById('kategori-baru-input');
 
-    // Jika memilih 'Tambah Lainnya...', ambil isi teks kustom buatan user
     if (kategori === "Tambah Lainnya...") {
         const kategoriKustom = kategoriBaruInput ? kategoriBaruInput.value.trim() : "";
         if (kategoriKustom === "") {
@@ -146,7 +165,6 @@ function tambahTransaksi() {
         }
         kategori = kategoriKustom;
 
-        // Masukkan kategori buatan user ke daftar sementara agar bisa dipilih lagi selama halaman belum di-refresh
         if (!daftarKategori[jenis].includes(kategori)) {
             daftarKategori[jenis].splice(daftarKategori[jenis].length - 1, 0, kategori);
         }
@@ -162,15 +180,14 @@ function tambahTransaksi() {
     document.getElementById('nominal').value = '';
     document.getElementById('tanggal').value = '';
 
-    updateKategoriOptions(); // Reset pilihan dropdown ke semula
+    updateKategoriOptions(); 
     generateFilterOptions();
     updateUI();
 }
 
-// LOGIKA UNTUK MENGEKSPOR DATA KE FORMAT EXCEL (.XLSX)
+// Ekspor ke file Excel
 function downloadExcel() {
     const periodeTerpilih = document.getElementById('filter-bulan').value;
-    
     const dataTerfilter = transaksi.filter(item => {
         const periodeTransaksi = item.tanggal ? item.tanggal.substring(0, 7) : '';
         return periodeTerpilih === 'all' || periodeTransaksi === periodeTerpilih;
@@ -197,7 +214,6 @@ function downloadExcel() {
     if (periodeTerpilih !== 'all') {
         namaFile = `Rekapan_Keuangan_${periodeTerpilih}.xlsx`;
     }
-
     XLSX.writeFile(workbook, namaFile);
 }
 
@@ -207,7 +223,7 @@ function hapusTransaksi(index) {
     updateUI();
 }
 
-// Daftarkan fungsi ke objek window global agar tidak hilang/error saat dipanggil dari HTML HTML
+// Daftarkan ke objek window agar bisa dipanggil dari atribut onclick/onchange HTML
 window.updateKategoriOptions = updateKategoriOptions;
 window.cekKategoriLainnya = cekKategoriLainnya;
 window.tambahTransaksi = tambahTransaksi;
@@ -215,14 +231,9 @@ window.hapusTransaksi = hapusTransaksi;
 window.downloadExcel = downloadExcel;
 window.updateUI = updateUI;
 
+// Dijalankan otomatis saat halaman selesai dimuat
 document.addEventListener("DOMContentLoaded", () => {
     updateKategoriOptions();
     generateFilterOptions();
     updateUI();
-    
-    // Sambungkan fungsi pengecekan ke elemen HTML secara dinamis untuk backup
-    const kategoriSelect = document.getElementById('kategori');
-    if (kategoriSelect) {
-        kategoriSelect.addEventListener('change', cekKategoriLainnya);
-    }
 });
