@@ -37,8 +37,10 @@
                 <option value="pengeluaran">Pengeluaran (-)</option>
             </select>
 
-            <select id="kategori">
+            <select id="kategori" onchange="cekKategoriLainnya()">
                 </select>
+
+            <input type="text" id="kategori-baru-input" placeholder="Ketik nama kategori baru..." style="display: none; margin-top: 10px;">
 
             <button onclick="tambahTransaksi()">Simpan</button>
         </div>
