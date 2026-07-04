@@ -3,6 +3,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 // Tambahan modul untuk Cloud Firestore Database
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+// TAMBAHAN: Modul Analytics agar sinkron dengan setup Firebase kamu
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
 
 // ✅ CONFIGURASI FIREBASE ASLI MILIK AFLIN
 const firebaseConfig = {
@@ -15,10 +17,11 @@ const firebaseConfig = {
     measurementId: "G-RW6C5H828V"
 };
 
-// Inisialisasi Firebase, Auth, & Firestore Database
+// Inisialisasi Firebase, Auth, Analytics & Firestore Database
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app); // Hubungkan ke Cloud Database
+const db = getFirestore(app); 
+const analytics = getAnalytics(app); // Aktifkan Analytics sesuai konfigurasi aslimu
 const provider = new GoogleAuthProvider();
 
 // Tampungan data transaksi aktif
@@ -47,6 +50,8 @@ onAuthStateChanged(auth, async (user) => {
     const statusUser = document.getElementById('status-user');
     const authBtn = document.getElementById('auth-btn');
 
+    if (!statusUser || !authBtn) return;
+
     if (user) {
         userSekarang = user;
         statusUser.innerText = `👋 Halo, ${user.displayName}`;
@@ -69,11 +74,16 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 // Logika Fungsi Tombol Login/Logout Klik
-document.getElementById('auth-btn').addEventListener('click', () => {
-    if (userSekarang) {
-        signOut(auth).catch((error) => alert("Gagal keluar: " + error.message));
-    } else {
-        signInWithPopup(auth, provider).catch((error) => alert("Gagal login: " + error.message));
+document.addEventListener("DOMContentLoaded", () => {
+    const authBtn = document.getElementById('auth-btn');
+    if (authBtn) {
+        authBtn.addEventListener('click', () => {
+            if (userSekarang) {
+                signOut(auth).catch((error) => alert("Gagal keluar: " + error.message));
+            } else {
+                signInWithPopup(auth, provider).catch((error) => alert("Gagal login: " + error.message));
+            }
+        });
     }
 });
 
@@ -82,7 +92,6 @@ async function ambilDataDariCloud() {
     if (!userSekarang) return;
     try {
         transaksi = [];
-        // Ambil data dari koleksi "transaksi" berdasarkan UID pengguna
         const q = query(
             collection(db, "transaksi"), 
             where("userId", "==", userSekarang.uid)
@@ -91,7 +100,6 @@ async function ambilDataDariCloud() {
         const querySnapshot = await getDocs(q);
         querySnapshot.forEach((documentSnapshot) => {
             const data = documentSnapshot.data();
-            // Simpan id dokumen firestore agar nanti bisa dihapus
             transaksi.push({
                 id: documentSnapshot.id,
                 ...data
@@ -298,7 +306,6 @@ function updateUI() {
     updateGrafik();
 }
 
-// Fungsi Simpan Transaksi Langsung ke Internet (Cloud)
 async function tambahTransaksi() {
     if (!userSekarang) {
         alert("Akses Terkunci! Silakan klik 'Masuk dengan Google' terlebih dahulu.");
@@ -330,7 +337,6 @@ async function tambahTransaksi() {
         return;
     }
 
-    // ✅ PERBAIKAN: Spasi pada nama variabel di bawah ini sudah dihapus
     const dataTransaksiBaru = {
         userId: userSekarang.uid, 
         deskripsi,
@@ -341,15 +347,12 @@ async function tambahTransaksi() {
     };
 
     try {
-        // Kirim dan simpan ke Cloud Firestore
         await addDoc(collection(db, "transaksi"), dataTransaksiBaru);
         
-        // Reset form input
         document.getElementById('deskripsi').value = '';
         document.getElementById('nominal').value = '';
         document.getElementById('tanggal').value = '';
 
-        // Ambil data terbaru dari cloud agar UI sinkron
         await ambilDataDariCloud();
         generateFilterOptions();
     } catch (error) {
@@ -357,13 +360,11 @@ async function tambahTransaksi() {
     }
 }
 
-// Fungsi Hapus Transaksi Langsung dari Internet (Cloud)
 async function hapusTransaksiCloud(docId) {
     if (!docId || docId === 'undefined') return;
     if (confirm("Apakah Anda yakin ingin menghapus transaksi ini dari database cloud?")) {
         try {
             await deleteDoc(doc(db, "transaksi", docId));
-            // Refresh data setelah sukses dihapus
             await ambilDataDariCloud();
             generateFilterOptions();
         } catch (error) {
