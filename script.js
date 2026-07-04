@@ -1,8 +1,28 @@
-// Mengambil data dari LocalStorage saat pertama kali web dibuka
-let transaksi = JSON.parse(localStorage.getItem('transaksi')) || [];
-let chartKategori = null; // Variabel global untuk menampung status grafik Chart.js
+// ISI DENGAN MODUL FIREBASE SDK RESMI
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// 1. DAFTAR KATEGORI
+// ⚠️ GANTI DENGAN KODE KONFIGURASI KAMU SENDIRI DARI FIREBASE CONSOLE
+const firebaseConfig = {
+    apiKey: "AIzaSyD-CONTOH-KUNCI-API-ANDA",
+    authDomain: "pencatat-keuangan-contoh.firebaseapp.com",
+    projectId: "pencatat-keuangan-contoh",
+    storageBucket: "pencatat-keuangan-contoh.appspot.com",
+    messagingSenderId: "1234567890",
+    appId: "1:1234567890:web:abcdefg123456"
+};
+
+// Inisialisasi Firebase & Auth
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+// Tampungan data transaksi aktif
+let transaksi = [];
+let chartKategori = null;
+let userSekarang = null;
+
+// Daftar Kategori Standar
 const daftarKategori = {
     pemasukan: ["Gaji Bulanan", "Side Hustle", "Bonus Lainnya", "Tambah Lainnya..."],
     pengeluaran: [
@@ -18,7 +38,44 @@ const daftarKategori = {
     ]
 };
 
-// Fungsi untuk mengubah isi dropdown kategori berdasarkan Jenis yang dipilih
+// Memantau Status Login User
+onAuthStateChanged(auth, (user) => {
+    const statusUser = document.getElementById('status-user');
+    const authBtn = document.getElementById('auth-btn');
+
+    if (user) {
+        // Jika pembeli sudah login berhasil
+        userSekarang = user;
+        statusUser.innerText = `👋 Halo, ${user.displayName}`;
+        authBtn.innerText = "Keluar";
+        authBtn.style.background = "#e74c3c";
+
+        // Ambil data transaksi khusus untuk akun email ini saja
+        transaksi = JSON.parse(localStorage.getItem(`transaksi_${user.uid}`)) || [];
+    } else {
+        // Jika belum login / sudah logout
+        userSekarang = null;
+        statusUser.innerText = "🔒 Belum Masuk (Akses Terkunci)";
+        authBtn.innerText = "Masuk dengan Google";
+        authBtn.style.background = "#3498db";
+        transaksi = []; // Kosongkan layar transaksi demi keamanan data
+    }
+    
+    // Segarkan ulang tampilan UI
+    updateKategoriOptions();
+    generateFilterOptions();
+    updateUI();
+});
+
+// Logika Fungsi Tombol Login/Logout Klik
+document.getElementById('auth-btn').addEventListener('click', () => {
+    if (userSekarang) {
+        signOut(auth).catch((error) => alert("Gagal keluar: " + error.message));
+    } else {
+        signInWithPopup(auth, provider).catch((error) => alert("Gagal login: " + error.message));
+    }
+});
+
 function updateKategoriOptions() {
     const jenisEl = document.getElementById('jenis');
     const kategoriSelect = document.getElementById('kategori');
@@ -29,7 +86,6 @@ function updateKategoriOptions() {
     const jenis = jenisEl.value;
     kategoriSelect.innerHTML = '';
     
-    // Isi dropdown dari array daftarKategori
     if (daftarKategori[jenis]) {
         daftarKategori[jenis].forEach(kat => {
             const option = document.createElement('option');
@@ -39,14 +95,12 @@ function updateKategoriOptions() {
         });
     }
 
-    // Sembunyikan input kustom setiap kali ganti jenis transaksi
     if (kategoriBaruInput) {
         kategoriBaruInput.style.display = "none";
         kategoriBaruInput.value = "";
     }
 }
 
-// Mendeteksi apakah user memilih opsi 'Tambah Lainnya...'
 function cekKategoriLainnya() {
     const kategoriSelect = document.getElementById('kategori');
     const kategoriBaruInput = document.getElementById('kategori-baru-input');
@@ -62,7 +116,6 @@ function cekKategoriLainnya() {
     }
 }
 
-// Membuat pilihan filter Periode secara otomatis
 function generateFilterOptions() {
     const filterBulanSelect = document.getElementById('filter-bulan');
     if (!filterBulanSelect) return;
@@ -97,18 +150,15 @@ function generateFilterOptions() {
     }
 }
 
-// FUNGSI BARU: Mengolah data dan menggambar grafik presentasi presentase pengeluaran
 function updateGrafik() {
     const filterBulanSelect = document.getElementById('filter-bulan');
     const periodeTerpilih = filterBulanSelect ? filterBulanSelect.value : 'all';
 
-    // 1. Filter transaksi hanya jenis PENGELUARAN pada periode yang dipilih
     const dataTerfilter = transaksi.filter(item => {
         const periodeTransaksi = item.tanggal ? item.tanggal.substring(0, 7) : '';
         return item.jenis === 'pengeluaran' && (periodeTerpilih === 'all' || periodeTransaksi === periodeTerpilih);
     });
 
-    // 2. Hitung akumulasi nominal berdasarkan kategori masing-masing
     const totalPerKategori = {};
     dataTerfilter.forEach(item => {
         const kat = item.kategori || "Tak Terduga";
@@ -122,12 +172,10 @@ function updateGrafik() {
     const boxGrafik = document.getElementById('box-grafik-container');
     if (!ctx) return;
 
-    // 3. Reset canvas grafik lama agar tidak tumpang tindih saat di-hover
     if (chartKategori) {
         chartKategori.destroy();
     }
 
-    // Sembunyikan container jika tidak ada data pengeluaran agar tampilan bersih
     if (data.length === 0) {
         if (boxGrafik) boxGrafik.style.display = 'none';
         return;
@@ -135,7 +183,6 @@ function updateGrafik() {
         if (boxGrafik) boxGrafik.style.display = 'block';
     }
 
-    // 4. Inisialisasi visualisasi Pie Chart dengan Chart.js
     chartKategori = new Chart(ctx, {
         type: 'pie',
         data: {
@@ -169,7 +216,6 @@ function updateGrafik() {
     });
 }
 
-// Menggambar Ulang Tampilan Tabel, Saldo, dan menyegarkan Grafik
 function updateUI() {
     const daftar = document.getElementById('daftar-transaksi');
     const totalSaldoEl = document.getElementById('total-saldo');
@@ -218,14 +264,21 @@ function updateUI() {
     if (totalPemasukanEl) totalPemasukanEl.innerText = `Rp ${totalPemasukan.toLocaleString('id-ID')}`;
     if (totalPengeluaranEl) totalPengeluaranEl.innerText = `Rp ${totalPengeluaran.toLocaleString('id-ID')}`;
     
-    localStorage.setItem('transaksi', JSON.stringify(transaksi));
+    // Amankan data ke penyimpanan unik berdasarkan UID user yang login
+    if (userSekarang) {
+        localStorage.setItem(`transaksi_${userSekarang.uid}`, JSON.stringify(transaksi));
+    }
 
-    // Jalankan pembaruan data visual presentasi keuangan
     updateGrafik();
 }
 
-// Menambah Transaksi Baru
 function tambahTransaksi() {
+    // Kunci fitur tambah data jika belum melakukan login Google
+    if (!userSekarang) {
+        alert("Akses Terkunci! Silakan klik 'Masuk dengan Google' terlebih dahulu.");
+        return;
+    }
+
     const deskripsi = document.getElementById('deskripsi').value;
     const nominal = parseInt(document.getElementById('nominal').value);
     const tanggal = document.getElementById('tanggal').value;
@@ -261,8 +314,12 @@ function tambahTransaksi() {
     updateUI();
 }
 
-// Ekspor ke file Excel
 function downloadExcel() {
+    if (!userSekarang) {
+        alert("Silakan login terlebih dahulu untuk mengunduh laporan.");
+        return;
+    }
+
     const periodeTerpilih = document.getElementById('filter-bulan').value;
     const dataTerfilter = transaksi.filter(item => {
         const periodeTransaksi = item.tanggal ? item.tanggal.substring(0, 7) : '';
@@ -299,7 +356,7 @@ function hapusTransaksi(index) {
     updateUI();
 }
 
-// Registrasi modul fungsi ke ranah global window
+// Ikat fungsi ke ranah global window agar tetap bekerja pada tipe module
 window.updateKategoriOptions = updateKategoriOptions;
 window.cekKategoriLainnya = cekKategoriLainnya;
 window.tambahTransaksi = tambahTransaksi;
@@ -308,9 +365,11 @@ window.downloadExcel = downloadExcel;
 window.updateUI = updateUI;
 window.updateGrafik = updateGrafik;
 
-// Dijalankan otomatis saat halaman selesai dimuat
+// Pasang Event listener cadangan saat form dimuat pertama kali
 document.addEventListener("DOMContentLoaded", () => {
-    updateKategoriOptions();
-    generateFilterOptions();
-    updateUI();
+    const jenisEl = document.getElementById('jenis');
+    const kategoriSelect = document.getElementById('kategori');
+    
+    if(jenisEl) jenisEl.addEventListener('change', updateKategoriOptions);
+    if(kategoriSelect) kategoriSelect.addEventListener('change', cekKategoriLainnya);
 });
