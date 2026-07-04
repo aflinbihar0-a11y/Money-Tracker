@@ -31,17 +31,96 @@ let userSekarang = null;
 const daftarKategori = {
     pemasukan: ["Gaji Bulanan", "Side Hustle", "Bonus Lainnya", "Tambah Lainnya..."],
     pengeluaran: [
-        "Makan",
-        "Minum",
-        "Transportasi",
-        "Nongkrong",
-        "Hiburan",
-        "Pengeluaran rutin",
-        "Pulsa dan Kuota",
-        "Kos/ Sewa Tempat tinggal",
-        "Tambah Lainnya..."
+        "Makan", "Minum", "Transportasi", "Nongkrong", "Hiburan", 
+        "Pengeluaran rutin", "Pulsa dan Kuota", "Kos/ Sewa Tempat tinggal", "Tambah Lainnya..."
     ]
 };
+
+// ================= LOGIKA SISTEM LISENSI CLOUD =================
+
+// Fungsi yang otomatis jalan saat halaman pertama kali dibuka
+document.addEventListener("DOMContentLoaded", () => {
+    periksaStatusLisensiLokal();
+});
+
+function periksaStatusLisensiLokal() {
+    const statusLisensiTerverifikasi = localStorage.getItem("lisensi_aktif_aflin");
+    const modal = document.getElementById("modal-lisensi");
+
+    if (statusLisensiTerverifikasi === "yes") {
+        if (modal) modal.style.display = "none"; // Sembunyikan layar kunci jika lisensi valid
+    } else {
+        if (modal) modal.style.display = "flex"; // Kunci layar jika lisensi belum diisi/tidak valid
+    }
+}
+
+// Fungsi utama verifikasi tombol klik
+async function verifikasiLisensi() {
+    const inputLisensi = document.getElementById("input-lisensi").value.trim();
+    const pesanEror = document.getElementById("pesan-lisensi-eror");
+    const btnAktivasi = document.getElementById("btn-aktivasi");
+
+    if (inputLisensi === "") {
+        tampilkanPesanLisensi("Mohon ketik kode lisensi Anda!");
+        return;
+    }
+
+    try {
+        btnAktivasi.innerText = "Memverifikasi...";
+        btnAktivasi.disabled = true;
+
+        // Mencari kode lisensi yang cocok langsung ke database cloud Firebase
+        const q = query(collection(db, "lisensi"), where("kode", "==", inputLisensi));
+        const querySnapshot = await getDocs(q);
+
+        let lisensiDitemukan = false;
+
+        querySnapshot.forEach((documentSnapshot) => {
+            const dataLisensi = documentSnapshot.data();
+            
+            // Cek apakah kodenya cocok dan statusnya bernilai TRUE (aktif)
+            if (dataLisensi.status === true) {
+                lisensiDitemukan = true;
+            }
+        });
+
+        if (lisensiDitemukan) {
+            // Simpan status kelulusan lisensi di memori browser pengguna
+            localStorage.setItem("lisensi_aktif_aflin", "yes");
+            
+            if (pesanEror) pesanEror.style.display = "none";
+            alert("🎉 Lisensi Berhasil Diaktifkan! Selamat Menggunakan Fitur Premium.");
+            
+            // Hilangkan pop-up pengunci layar
+            const modal = document.getElementById("modal-lisensi");
+            if (modal) modal.style.display = "none";
+        } else {
+            tampilkanPesanLisensi("❌ Kode Lisensi Salah atau Sudah Tidak Aktif!");
+            localStorage.removeItem("lisensi_aktif_aflin");
+        }
+    } catch (error) {
+        tampilkanPesanLisensi("Gagal tersambung ke server lisensi: " + error.message);
+    } finally {
+        btnAktivasi.innerText = "Aktifkan Aplikasi";
+        btnAktivasi.disabled = false;
+    }
+}
+
+function tampilkanPesanLisensi(teks) {
+    const pesanEror = document.getElementById("pesan-lisensi-eror");
+    if (pesanEror) {
+        pesanEror.innerText = teks;
+        pesanEror.style.display = "block";
+    }
+}
+
+// Fungsi reset manual untuk kebutuhan testing developer
+function hapusLisensiTester() {
+    localStorage.removeItem("lisensi_aktif_aflin");
+    window.location.reload();
+}
+
+// ================= LOGIKA UTAMA APLIKASI KEUANGAN =================
 
 // Memantau Status Login User
 onAuthStateChanged(auth, async (user) => {
@@ -83,25 +162,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-// Fungsi untuk Mengambil Data dari Cloud Firestore
 async function ambilDataDariCloud() {
     if (!userSekarang) return;
     try {
         transaksi = [];
-        const q = query(
-            collection(db, "transaksi"), 
-            where("userId", "==", userSekarang.uid)
-        );
-        
+        const q = query(collection(db, "transaksi"), where("userId", "==", userSekarang.uid));
         const querySnapshot = await getDocs(q);
         querySnapshot.forEach((documentSnapshot) => {
             const data = documentSnapshot.data();
-            transaksi.push({
-                id: documentSnapshot.id,
-                ...data
-            });
+            transaksi.push({ id: documentSnapshot.id, ...data });
         });
-        
         transaksi.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
         updateUI();
     } catch (error) {
@@ -127,7 +197,6 @@ function updateKategoriOptions() {
             kategoriSelect.appendChild(option);
         });
     }
-
     if (kategoriBaruInput) {
         kategoriBaruInput.style.display = "none";
         kategoriBaruInput.value = "";
@@ -165,9 +234,7 @@ function generateFilterOptions() {
             }
         }
     });
-
     daftarPeriode.sort().reverse();
-
     daftarPeriode.forEach(periode => {
         const option = document.createElement('option');
         option.value = periode;
@@ -186,7 +253,6 @@ function generateFilterOptions() {
 function updateGrafik() {
     const filterBulanSelect = document.getElementById('filter-bulan');
     const periodeTerpilih = filterBulanSelect ? filterBulanSelect.value : 'all';
-
     const dataTerfilter = transaksi.filter(item => {
         const periodeTransaksi = item.tanggal ? item.tanggal.substring(0, 7) : '';
         return item.jenis === 'pengeluaran' && (periodeTerpilih === 'all' || periodeTransaksi === periodeTerpilih);
@@ -200,15 +266,11 @@ function updateGrafik() {
 
     const labels = Object.keys(totalPerKategori);
     const data = Object.values(totalPerKategori);
-
     const ctx = document.getElementById('grafikKategori');
     const boxGrafik = document.getElementById('box-grafik-container');
     if (!ctx) return;
 
-    if (chartKategori) {
-        chartKategori.destroy();
-    }
-
+    if (chartKategori) chartKategori.destroy();
     if (data.length === 0) {
         if (boxGrafik) boxGrafik.style.display = 'none';
         return;
@@ -251,7 +313,6 @@ function updateUI() {
     const filterBulanSelect = document.getElementById('filter-bulan');
     
     if (!daftar) return;
-
     const periodeTerpilih = filterBulanSelect ? filterBulanSelect.value : 'all';
     daftar.innerHTML = '';
     let totalSaldo = 0;
@@ -260,7 +321,6 @@ function updateUI() {
 
     transaksi.forEach((item) => {
         const periodeTransaksi = item.tanggal ? item.tanggal.substring(0, 7) : ''; 
-
         if (periodeTerpilih === 'all' || periodeTransaksi === periodeTerpilih) {
             const li = document.createElement('li');
             li.classList.add(item.jenis);
@@ -290,7 +350,6 @@ function updateUI() {
     if (totalSaldoEl) totalSaldoEl.innerText = `Rp ${totalSaldo.toLocaleString('id-ID')}`;
     if (totalPemasukanEl) totalPemasukanEl.innerText = `Rp ${totalPemasukan.toLocaleString('id-ID')}`;
     if (totalPengeluaranEl) totalPengeluaranEl.innerText = `Rp ${totalPengeluaran.toLocaleString('id-ID')}`;
-
     updateGrafik();
 }
 
@@ -299,7 +358,6 @@ async function tambahTransaksi() {
         alert("Akses Terkunci! Silakan klik 'Masuk dengan Google' terlebih dahulu.");
         return;
     }
-
     const deskripsi = document.getElementById('deskripsi').value;
     const nominal = parseInt(document.getElementById('nominal').value);
     const tanggal = document.getElementById('tanggal').value;
@@ -314,7 +372,6 @@ async function tambahTransaksi() {
             return;
         }
         kategori = kategoriKustom;
-
         if (!daftarKategori[jenis].includes(kategori)) {
             daftarKategori[jenis].splice(daftarKategori[jenis].length - 1, 0, kategori);
         }
@@ -325,15 +382,7 @@ async function tambahTransaksi() {
         return;
     }
 
-    const dataTransaksiBaru = {
-        userId: userSekarang.uid, 
-        deskripsi,
-        nominal,
-        tanggal,
-        jenis,
-        kategori
-    };
-
+    const dataTransaksiBaru = { userId: userSekarang.uid, deskripsi, nominal, tanggal, jenis, kategori };
     try {
         await addDoc(collection(db, "transaksi"), dataTransaksiBaru);
         document.getElementById('deskripsi').value = '';
@@ -364,7 +413,6 @@ async function downloadExcel() {
         alert("Silakan login terlebih dahulu untuk mengunduh laporan.");
         return;
     }
-
     const periodeTerpilih = document.getElementById('filter-bulan').value;
     const dataTerfilter = transaksi.filter(item => {
         const periodeTransaksi = item.tanggal ? item.tanggal.substring(0, 7) : '';
@@ -396,6 +444,8 @@ async function downloadExcel() {
 }
 
 // Ikat fungsi ke ranah global window agar tetap bekerja pada tipe module
+window.verifikasiLisensi = verifikasiLisensi;
+window.hapusLisensiTester = hapusLisensiTester;
 window.updateKategoriOptions = updateKategoriOptions;
 window.cekKategoriLainnya = cekKategoriLainnya;
 window.tambahTransaksi = tambahTransaksi;
