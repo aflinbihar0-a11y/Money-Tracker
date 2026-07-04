@@ -1,12 +1,10 @@
 // ISI DENGAN MODUL FIREBASE SDK RESMI
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-// Tambahan modul untuk Cloud Firestore Database
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-// TAMBAHAN: Modul Analytics agar sinkron dengan setup Firebase kamu
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
 
-// ✅ CONFIGURASI FIREBASE ASLI MILIK AFLIN
+// CONFIGURASI FIREBASE ASLI MILIK AFLIN
 const firebaseConfig = {
     apiKey: "AIzaSyC0UiNRwTFjw7vLgmuKnuo8x4JnISGneLE",
     authDomain: "money-tracker-6af12.firebaseapp.com",
@@ -17,11 +15,11 @@ const firebaseConfig = {
     measurementId: "G-RW6C5H828V"
 };
 
-// Inisialisasi Firebase, Auth, Analytics & Firestore Database
+// Inisialisasi Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app); 
-const analytics = getAnalytics(app); // Aktifkan Analytics sesuai konfigurasi aslimu
+const analytics = getAnalytics(app);
 const provider = new GoogleAuthProvider();
 
 // Tampungan data transaksi aktif
@@ -57,8 +55,6 @@ onAuthStateChanged(auth, async (user) => {
         statusUser.innerText = `👋 Halo, ${user.displayName}`;
         authBtn.innerText = "Keluar";
         authBtn.style.background = "#e74c3c";
-
-        // Ambil data transaksi dari Cloud Firestore khusus untuk UID user ini
         await ambilDataDariCloud();
     } else {
         userSekarang = null;
@@ -66,7 +62,7 @@ onAuthStateChanged(auth, async (user) => {
         authBtn.innerText = "Masuk dengan Google";
         authBtn.style.background = "#3498db";
         transaksi = []; 
-        updateUI(); // Kosongkan layar
+        updateUI();
     }
     
     updateKategoriOptions();
@@ -106,9 +102,7 @@ async function ambilDataDariCloud() {
             });
         });
         
-        // Urutkan manual berdasarkan tanggal di sisi client
         transaksi.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
-
         updateUI();
     } catch (error) {
         console.error("Gagal mengambil data cloud: ", error);
@@ -228,20 +222,14 @@ function updateGrafik() {
             labels: labels,
             datasets: [{
                 data: data,
-                backgroundColor: [
-                    '#e74c3c', '#3498db', '#f1c40f', '#2ecc71', 
-                    '#9b59b6', '#1abc9c', '#e67e22', '#34495e', '#7f8c8d'
-                ],
+                backgroundColor: ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71', '#9b59b6', '#1abc9c', '#e67e22', '#34495e', '#7f8c8d'],
                 borderWidth: 1
             }]
         },
         options: {
             responsive: true,
             plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: { boxWidth: 12, font: { size: 12 } }
-                },
+                legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 } } },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
@@ -348,11 +336,9 @@ async function tambahTransaksi() {
 
     try {
         await addDoc(collection(db, "transaksi"), dataTransaksiBaru);
-        
         document.getElementById('deskripsi').value = '';
         document.getElementById('nominal').value = '';
         document.getElementById('tanggal').value = '';
-
         await ambilDataDariCloud();
         generateFilterOptions();
     } catch (error) {
@@ -373,7 +359,7 @@ async function hapusTransaksiCloud(docId) {
     }
 }
 
-function downloadExcel() {
+async function downloadExcel() {
     if (!userSekarang) {
         alert("Silakan login terlebih dahulu untuk mengunduh laporan.");
         return;
@@ -418,11 +404,10 @@ window.downloadExcel = downloadExcel;
 window.updateUI = updateUI;
 window.updateGrafik = updateGrafik;
 
-// Pasang Event listener cadangan saat form dimuat pertama kali
+// Pasang Event listener saat form dimuat pertama kali
 document.addEventListener("DOMContentLoaded", () => {
     const jenisEl = document.getElementById('jenis');
     const kategoriSelect = document.getElementById('kategori');
-    
     if(jenisEl) jenisEl.addEventListener('change', updateKategoriOptions);
     if(kategoriSelect) kategoriSelect.addEventListener('change', cekKategoriLainnya);
 });
