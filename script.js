@@ -2,7 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 // Tambahan modul untuk Cloud Firestore Database
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // ✅ CONFIGURASI FIREBASE ASLI MILIK AFLIN
 const firebaseConfig = {
@@ -82,7 +82,7 @@ async function ambilDataDariCloud() {
     if (!userSekarang) return;
     try {
         transaksi = [];
-        // Ambil data dari koleksi "transaksi" berdasarkan UID pengguna, urutkan berdasarkan tanggal terbaru
+        // Ambil data dari koleksi "transaksi" berdasarkan UID pengguna
         const q = query(
             collection(db, "transaksi"), 
             where("userId", "==", userSekarang.uid)
@@ -330,8 +330,9 @@ async function tambahTransaksi() {
         return;
     }
 
-    const dataTransaksi Baru = {
-        userId: userSekarang.uid, // Tautkan ke ID user login
+    // ✅ PERBAIKAN: Spasi pada nama variabel di bawah ini sudah dihapus
+    const dataTransaksiBaru = {
+        userId: userSekarang.uid, 
         deskripsi,
         nominal,
         tanggal,
