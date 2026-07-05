@@ -181,17 +181,29 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Tambahan Listener: Tombol Login Khusus di Dalam Modal/Pop-up
-    const btnPopup = document.getElementById("auth-btn-popup");
-    if (btnPopup) {
-        btnPopup.addEventListener("click", () => {
-            signInWithPopup(auth, provider)
-                .then((result) => {
-                    alert(`✅ Akun Terverifikasi!\nEmail: ${result.user.email}\nSilakan lanjutkan Langkah 2.`);
-                })
-                .catch((error) => alert("Gagal login via pop-up: " + error.message));
-        });
-    }
+   // Tambahan Listener: Tombol Login Khusus di Dalam Modal/Pop-up
+const btnPopup = document.getElementById("auth-btn-popup");
+if (btnPopup) {
+    btnPopup.addEventListener("click", () => {
+        signInWithPopup(auth, provider)
+            .then((result) => {
+                // SINKRONISASI INSTAN AGAR VARIABEL GLOBAL TERISI
+                userSekarang = result.user; 
+                
+                // Perbarui tampilan tombol di dalam modal secara instan
+                btnPopup.innerText = `Teridentifikasi: ${result.user.email}`;
+                btnPopup.style.background = "#2ecc71";
+                btnPopup.disabled = true;
+
+                // Sembunyikan pesan eror jika sebelumnya ada
+                const pesanEror = document.getElementById("pesan-lisensi-eror");
+                if (pesanEror) pesanEror.style.display = "none";
+
+                alert(`✅ Akun Terverifikasi!\nEmail: ${result.user.email}\nSilakan lanjutkan Langkah 2.`);
+            })
+            .catch((error) => alert("Gagal login via pop-up: " + error.message));
+    });
+}
 });
 
 async function ambilDataDariCloud() {
