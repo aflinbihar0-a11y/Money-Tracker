@@ -54,7 +54,7 @@ function periksaStatusLisensiLokal() {
     }
 }
 
-// Fungsi utama verifikasi tombol klik
+// Fungsi utama verifikasi tombol klik (VERSI AMAN - KUNCI EMAIL)
 async function verifikasiLisensi() {
     const inputLisensi = document.getElementById("input-lisensi").value.trim();
     const pesanEror = document.getElementById("pesan-lisensi-eror");
@@ -62,6 +62,12 @@ async function verifikasiLisensi() {
 
     if (inputLisensi === "") {
         tampilkanPesanLisensi("Mohon ketik kode lisensi Anda!");
+        return;
+    }
+
+    // 🛑 CEGATAN KEAMANAN: Pengguna harus login dengan Google dulu sebelum bisa mengaktifkan lisensi
+    if (!userSekarang || !userSekarang.email) {
+        tampilkanPesanLisensi("❌ Silakan masuk/login dengan Akun Google terlebih dahulu di latar belakang sebelum memasukkan lisensi!");
         return;
     }
 
@@ -78,8 +84,8 @@ async function verifikasiLisensi() {
         querySnapshot.forEach((documentSnapshot) => {
             const dataLisensi = documentSnapshot.data();
             
-            // Cek apakah kodenya cocok dan statusnya bernilai TRUE (aktif)
-            if (dataLisensi.status === true) {
+            // 🔒 SEKARANG KITA CEK: Kodenya aktif DAN kolom email di Firebase harus sama dengan email Google yang sedang login!
+            if (dataLisensi.status === true && dataLisensi.email === userSekarang.email) {
                 lisensiDitemukan = true;
             }
         });
@@ -95,10 +101,10 @@ async function verifikasiLisensi() {
             const modal = document.getElementById("modal-lisensi");
             if (modal) modal.style.display = "none";
 
-            // Jalankan ulang deteksi login setelah lisensi berhasil aktif
+            // Jalankan ulang halaman
             window.location.reload();
         } else {
-            tampilkanPesanLisensi("❌ Kode Lisensi Salah atau Sudah Tidak Aktif!");
+            tampilkanPesanLisensi("❌ Kode Lisensi Salah, Tidak Aktif, atau Tidak Terdaftar untuk Email Google Anda!");
             localStorage.removeItem("lisensi_aktif_aflin");
         }
     } catch (error) {
