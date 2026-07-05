@@ -38,7 +38,6 @@ const daftarKategori = {
 
 // ================= LOGIKA SISTEM LISENSI CLOUD =================
 
-// Fungsi yang otomatis jalan saat halaman pertama kali dibuka
 document.addEventListener("DOMContentLoaded", () => {
     periksaStatusLisensiLokal();
 });
@@ -48,13 +47,13 @@ function periksaStatusLisensiLokal() {
     const modal = document.getElementById("modal-lisensi");
 
     if (statusLisensiTerverifikasi === "yes") {
-        if (modal) modal.style.display = "none"; // Sembunyikan layar kunci jika lisensi valid
+        if (modal) modal.style.display = "none"; 
     } else {
-        if (modal) modal.style.display = "flex"; // Kunci layar jika lisensi belum diisi/tidak valid
+        if (modal) modal.style.display = "flex"; 
     }
 }
 
-// Fungsi utama verifikasi tombol klik (VERSI AMAN - KUNCI EMAIL)
+// Fungsi utama verifikasi tombol klik
 async function verifikasiLisensi() {
     const inputLisensi = document.getElementById("input-lisensi").value.trim();
     const pesanEror = document.getElementById("pesan-lisensi-eror");
@@ -65,9 +64,9 @@ async function verifikasiLisensi() {
         return;
     }
 
-    // 🛑 CEGATAN KEAMANAN: Pengguna harus login dengan Google dulu sebelum bisa mengaktifkan lisensi
+    // CEGATAN KEAMANAN: Wajib login Google via backend/modal
     if (!userSekarang || !userSekarang.email) {
-        tampilkanPesanLisensi("❌ Silakan masuk/login dengan Akun Google terlebih dahulu di latar belakang sebelum memasukkan lisensi!");
+        tampilkanPesanLisensi("❌ Silakan klik 'Masuk dengan Google' di atas terlebih dahulu!");
         return;
     }
 
@@ -75,7 +74,6 @@ async function verifikasiLisensi() {
         btnAktivasi.innerText = "Memverifikasi...";
         btnAktivasi.disabled = true;
 
-        // Mencari kode lisensi yang cocok langsung ke database cloud Firebase
         const q = query(collection(db, "lisensi"), where("kode", "==", inputLisensi));
         const querySnapshot = await getDocs(q);
 
@@ -83,25 +81,20 @@ async function verifikasiLisensi() {
 
         querySnapshot.forEach((documentSnapshot) => {
             const dataLisensi = documentSnapshot.data();
-            
-            // 🔒 SEKARANG KITA CEK: Kodenya aktif DAN kolom email di Firebase harus sama dengan email Google yang sedang login!
+            // Cek status aktif DAN kecocokan email Firestore dengan Google Session
             if (dataLisensi.status === true && dataLisensi.email === userSekarang.email) {
                 lisensiDitemukan = true;
             }
         });
 
         if (lisensiDitemukan) {
-            // Simpan status kelulusan lisensi di memori browser pengguna
             localStorage.setItem("lisensi_aktif_aflin", "yes");
-            
             if (pesanEror) pesanEror.style.display = "none";
             alert("🎉 Lisensi Berhasil Diaktifkan! Selamat Menggunakan Fitur Premium.");
             
-            // Hilangkan pop-up pengunci layar
             const modal = document.getElementById("modal-lisensi");
             if (modal) modal.style.display = "none";
 
-            // Jalankan ulang halaman
             window.location.reload();
         } else {
             tampilkanPesanLisensi("❌ Kode Lisensi Salah, Tidak Aktif, atau Tidak Terdaftar untuk Email Google Anda!");
@@ -123,7 +116,6 @@ function tampilkanPesanLisensi(teks) {
     }
 }
 
-// Fungsi reset manual untuk kebutuhan testing developer
 function hapusLisensiTester() {
     localStorage.removeItem("lisensi_aktif_aflin");
     window.location.reload();
@@ -131,12 +123,26 @@ function hapusLisensiTester() {
 
 // ================= LOGIKA UTAMA APLIKASI KEUANGAN =================
 
-// Memantau Status Login User
 onAuthStateChanged(auth, async (user) => {
-    // 🛑 CEGATAN LISENSI: Jika lisensi belum aktif, hentikan paksa proses render data Firebase!
+    // Simpan data user ke ranah global agar terbaca oleh fungsi verifikasiLisensi
+    if (user) {
+        userSekarang = user;
+    } else {
+        userSekarang = null;
+    }
+
+    // Jika lisensi belum aktif, biarkan modal tetap mengunci layar dan hentikan render data finansial
     if (localStorage.getItem("lisensi_aktif_aflin") !== "yes") {
         const modal = document.getElementById("modal-lisensi");
         if (modal) modal.style.display = "flex";
+        
+        // Update info teks atau status tombol di dalam modal jika user sudah klik login
+        const btnPopup = document.getElementById("auth-btn-popup");
+        if (user && btnPopup) {
+            btnPopup.innerText = `Teridentifikasi: ${user.email}`;
+            btnPopup.style.background = "#2ecc71";
+            btnPopup.disabled = true;
+        }
         return; 
     }
 
@@ -146,13 +152,11 @@ onAuthStateChanged(auth, async (user) => {
     if (!statusUser || !authBtn) return;
 
     if (user) {
-        userSekarang = user;
         statusUser.innerText = `👋 Halo, ${user.displayName}`;
         authBtn.innerText = "Keluar";
         authBtn.style.background = "#e74c3c";
         await ambilDataDariCloud();
     } else {
-        userSekarang = null;
         statusUser.innerText = "🔒 Belum Masuk (Akses Terkunci)";
         authBtn.innerText = "Masuk dengan Google";
         authBtn.style.background = "#3498db";
@@ -164,7 +168,7 @@ onAuthStateChanged(auth, async (user) => {
     generateFilterOptions();
 });
 
-// Logika Fungsi Tombol Login/Logout Klik
+// Listener Tombol di Halaman Utama (Navbar)
 document.addEventListener("DOMContentLoaded", () => {
     const authBtn = document.getElementById('auth-btn');
     if (authBtn) {
@@ -174,6 +178,18 @@ document.addEventListener("DOMContentLoaded", () => {
             } else {
                 signInWithPopup(auth, provider).catch((error) => alert("Gagal login: " + error.message));
             }
+        });
+    }
+
+    // Tambahan Listener: Tombol Login Khusus di Dalam Modal/Pop-up
+    const btnPopup = document.getElementById("auth-btn-popup");
+    if (btnPopup) {
+        btnPopup.addEventListener("click", () => {
+            signInWithPopup(auth, provider)
+                .then((result) => {
+                    alert(`✅ Akun Terverifikasi!\nEmail: ${result.user.email}\nSilakan lanjutkan Langkah 2.`);
+                })
+                .catch((error) => alert("Gagal login via pop-up: " + error.message));
         });
     }
 });
@@ -371,7 +387,7 @@ function updateUI() {
 
 async function tambahTransaksi() {
     if (!userSekarang) {
-        alert("Akses Terkunci! Silakan klik 'Masuk dengan Google' terlebih dahulu.");
+        alert("Akses Terkunci! Silakan login terlebih dahulu.");
         return;
     }
     const deskripsi = document.getElementById('deskripsi').value;
