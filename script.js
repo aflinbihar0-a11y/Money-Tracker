@@ -94,6 +94,9 @@ async function verifikasiLisensi() {
             // Hilangkan pop-up pengunci layar
             const modal = document.getElementById("modal-lisensi");
             if (modal) modal.style.display = "none";
+
+            // Jalankan ulang deteksi login setelah lisensi berhasil aktif
+            window.location.reload();
         } else {
             tampilkanPesanLisensi("❌ Kode Lisensi Salah atau Sudah Tidak Aktif!");
             localStorage.removeItem("lisensi_aktif_aflin");
@@ -124,6 +127,13 @@ function hapusLisensiTester() {
 
 // Memantau Status Login User
 onAuthStateChanged(auth, async (user) => {
+    // 🛑 CEGATAN LISENSI: Jika lisensi belum aktif, hentikan paksa proses render data Firebase!
+    if (localStorage.getItem("lisensi_aktif_aflin") !== "yes") {
+        const modal = document.getElementById("modal-lisensi");
+        if (modal) modal.style.display = "flex";
+        return; 
+    }
+
     const statusUser = document.getElementById('status-user');
     const authBtn = document.getElementById('auth-btn');
 
